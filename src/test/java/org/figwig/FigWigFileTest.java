@@ -525,4 +525,95 @@ public class FigWigFileTest {
         Thread.sleep(200);
         assertEquals(0, source.readsAfterClose);
     }
+
+    /**
+     * Through a remote source, where the reader asks for longer stretches and sends the requests of a
+     * load at once: every value, prefetched or not, and every summary are the local file's.
+     */
+    @Test(timeout = 300000)
+    public void testARemoteSourceReadsWhatTheLocalFileHolds() throws Exception {
+        for (String file : FILES) {
+            FigWigFile local = FigWigFile.open(DIR + file);
+            FigWigFile remote = FigWigFile.open(file, new MemorySource(Files.readAllBytes(new File(DIR + file).toPath())));
+            try {
+                assertEquals(local.nTracks(), remote.nTracks());
+                for (int t = 0; t < local.nTracks(); t++) {
+                    assertEquals(local.trackName(t), remote.trackName(t));
+                    for (int c = 0; c < local.nChroms(); c++) {
+                        int len = (int) local.chromLength(c);
+                        assertArrayEquals(file + " track " + t + " " + local.chromName(c),
+                                local.readDense(t, c, 0, len), remote.readDense(t, c, 0, len), 0.0);
+                        remote.prefetch(t, c, len / 3, len);
+                        assertArrayEquals(local.readDense(t, c, len / 3, len), remote.readDense(t, c, len / 3, len), 0.0);
+                    }
+                    assertEquals(local.hasSummary(t), remote.hasSummary(t));
+                    for (int k = 0; k < local.levels(); k++) {
+                        FigWigFile.Runs a = local.levelMeans(t, k, 0, 0, (int) local.chromLength(0));
+                        FigWigFile.Runs b = remote.levelMeans(t, k, 0, 0, (int) local.chromLength(0));
+                        assertEquals(a == null, b == null);
+                        if (a != null) {
+                            assertEquals(a.n, b.n);
+                            for (int i = 0; i < a.n; i++) {
+                                assertEquals(a.starts[i], b.starts[i]);
+                                assertEquals(bits(a.values[i]), bits(b.values[i]));
+                            }
+                        }
+                    }
+                }
+            } finally {
+                local.close();
+                remote.close();
+            }
+        }
+    }
+
+    /** What the file says of itself and of its tracks, against its values. */
+    @Test
+    public void testMetadataDescribesTheFile() throws Exception {
+        FigWigFile fw = FigWigFile.open(DIR + "positions_zlib.fw");
+        try {
+            assertEquals(DIR + "positions_zlib.fw", fw.path());
+            assertEquals("toy", fw.genome());
+            assertEquals(fw.levelBases(0), fw.summaryBases());
+            assertNull(fw.chromId("not a chromosome"));
+            for (int c = 0; c < fw.nChroms(); c++) {
+                assertEquals(c, (int) fw.chromId(fw.chromName(c)));
+            }
+            int withValues = 0;
+            for (int t = 0; t < fw.nTracks(); t++) {
+                double sum = 0, min = Double.POSITIVE_INFINITY, max = Double.NEGATIVE_INFINITY;
+                long nonzero = 0;
+                for (int c = 0; c < fw.nChroms(); c++) {
+                    FigWigFile.Runs runs = fw.read(t, c, 0, (int) fw.chromLength(c));
+                    for (int i = 0; i < runs.n; i++) {
+                        if (!Double.isNaN(runs.values[i])) {
+                            int bases = runs.ends[i] - runs.starts[i];
+                            sum += runs.values[i] * bases;
+                            nonzero += bases;
+                            min = Math.min(min, runs.values[i]);
+                            max = Math.max(max, runs.values[i]);
+                        }
+                    }
+                }
+                String name = fw.trackName(t);
+                assertEquals(name, nonzero, fw.trackNonzero(t));
+                assertEquals(name, sum, fw.trackSum(t), 1e-6 * Math.max(1, Math.abs(sum)));
+                if (nonzero > 0) {
+                    assertEquals(name, min, fw.trackMin(t), 0.0);
+                    assertEquals(name, max, fw.trackMax(t), 0.0);
+                    withValues++;
+                }
+                assertNotNull(fw.trackDtype(t));
+                try {
+                    fw.trackAttributes(t).put("added", "value");
+                    fail("a track's attributes were changed");
+                } catch (UnsupportedOperationException expected) {
+                    // read-only
+                }
+            }
+            assertTrue(withValues > 5);
+        } finally {
+            fw.close();
+        }
+    }
 }
