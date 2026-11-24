@@ -24,13 +24,13 @@ released on its own.
 ## Building
 
 ```bash
-./gradlew build          # compiles, runs the tests, writes build/libs/figwig-dev.jar
-./gradlew installDist    # also writes a launcher: build/install/figwig/bin/figwig
+./gradlew build          # compiles, runs the tests, writes build/libs/figwig-java-dev.jar
+./gradlew installDist    # also writes a launcher: build/install/figwig-java/bin/figwig-java
 ```
 
 ## Using it in another project
 
-Each [release](https://github.com/igvteam/figwig/releases) has the jar attached. A Gradle build can
+Each [release](https://github.com/igvteam/figwig-java/releases) has the jar attached. A Gradle build can
 take it from there without credentials:
 
 ```groovy
@@ -44,7 +44,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'igvteam:figwig:0.1.0'
+    implementation 'igvteam:figwig-java:0.1.1'
     implementation 'org.json:json:20250517'   // not brought in by the line above
 }
 ```
@@ -52,7 +52,7 @@ dependencies {
 ## Making a release
 
 Publish a release on GitHub with a tag of the form `v1.2.3`. A workflow runs the tests, builds
-`figwig-1.2.3.jar` and attaches it to the release. Nothing in the repository needs editing: the
+`figwig-java-1.2.3.jar` and attaches it to the release. Nothing in the repository needs editing: the
 version comes from the tag.
 
 ## Running from the command line
@@ -63,17 +63,17 @@ a file name and fails.
 After `./gradlew installDist`:
 
 ```bash
-build/install/figwig/bin/figwig info FILE
-build/install/figwig/bin/figwig read FILE CHROM START WIDTH [TRACK ...]
+build/install/figwig-java/bin/figwig-java info FILE
+build/install/figwig-java/bin/figwig-java read FILE CHROM START WIDTH [TRACK ...]
 ```
 
-On Windows the launcher is `build\install\figwig\bin\figwig.bat`. The examples below shorten it to
-`figwig`.
+On Windows the launcher is `build\install\figwig-java\bin\figwig-java.bat`. The examples below shorten it to
+`figwig-java`.
 
 ### `info`: what a file holds
 
 ```
-$ figwig info test/data/positions_zlib.fw
+$ figwig-java info test/data/positions_zlib.fw
 genome	toy
 tile	64
 zooms	[4, 16]
@@ -94,7 +94,7 @@ track	sum	nonzero	min	max	record
 ### `read`: the values of a window
 
 ```
-$ figwig read test/data/positions_zlib.fw chr1 0 4 signal random
+$ figwig-java read test/data/positions_zlib.fw chr1 0 4 signal random
 position	signal	random
 0	-0.2991911470890045	217.0
 1	0.0	163.0
@@ -121,7 +121,7 @@ position	signal	random
   number of chromosomes but not their names; from Java, `chromSizes()` lists them.
 - **Memory.** A window is held in memory before it is printed: 8 bytes per base per track. The reader
   also keeps up to 256 MB of the file it has decoded. For a wide window over many tracks, raise the
-  heap, for example `JAVA_OPTS=-Xmx8g figwig read ...`.
+  heap, for example `JAVA_OPTS=-Xmx8g figwig-java read ...`.
 - **One window per command.** To read many windows, use the class from Java.
 
 ## Using it from Java

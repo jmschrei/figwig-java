@@ -237,8 +237,8 @@ public class FigWigReader implements Closeable {
     // Command line
 
     private static final String USAGE = """
-            usage: figwig info FILE
-                   figwig read FILE CHROM START WIDTH [TRACK ...]
+            usage: figwig-java info FILE
+                   figwig-java read FILE CHROM START WIDTH [TRACK ...]
             info prints the file's genome, tile, chromosomes and tracks.
             read prints a line per base of the window: its position, then its value in each track
             named (every track when none is)."""

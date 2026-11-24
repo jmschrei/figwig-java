@@ -28,7 +28,7 @@ application {
 
 jar {
     manifest {
-        attributes 'Implementation-Title': 'figwig', 'Implementation-Version': project.version
+        attributes 'Implementation-Title': 'figwig-java', 'Implementation-Version': project.version
     }
 }
 
